@@ -90,7 +90,12 @@ class NeoClock(Gtk.Window):
         self.da = Gtk.DrawingArea()
         self.da.connect("draw", self.on_draw)
         self.add(self.da)
+        screen.connect("size-changed", lambda sc: self.reposition(sc))
         self.show_all()
+
+    def reposition(self, sc):
+        g = sc.get_monitor_geometry(sc.get_primary_monitor())
+        self.move(g.x + (g.width - self.w) // 2, g.y + int(g.height * 0.21))
 
         # Click-through completo para no estorbar clics en el escritorio
         win = self.get_window()
