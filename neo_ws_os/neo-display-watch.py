@@ -26,12 +26,8 @@ def apply_layout():
     except Exception:
         wall = "/usr/share/wallpapers/neo_ws/04_silk_waves.jpg"
 
-    # Re-escalar fondo al 100% de la nueva resolucion (cero bordes negros!)
+    # Re-escalar fondo al 100% de la nueva resolucion (neo-bar, neo-dock y neo-clock se auto-adaptan solos!)
     subprocess.Popen(["feh", "--bg-fill", wall])
-    # Reiniciar Polybar para que las 3 capsulas se adapten exactas de borde a borde
-    subprocess.Popen(
-        ["bash", "-c", "pkill -x polybar 2>/dev/null; sleep 0.15; polybar -c ~/.config/polybar/config.ini neo >/dev/null 2>&1 &"]
-    )
     return False
 
 
