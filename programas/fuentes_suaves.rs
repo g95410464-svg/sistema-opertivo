@@ -1,0 +1,12 @@
+pub const MONO_W: usize = 9;
+pub const MONO_H: usize = 16;
+pub const MONO_DATA: &[u8] = include_bytes!("fuente_mono.bin");
+pub const UI_W: usize = 11;
+pub const UI_H: usize = 17;
+pub const UI_DATA: &[u8] = include_bytes!("fuente_ui.bin");
+pub const UI_ADV: [u8; 95] = [4,5,7,9,9,11,11,5,5,5,7,10,4,7,4,7,9,9,9,9,9,9,9,9,9,9,4,4,10,10,10,7,11,10,9,10,11,8,8,10,11,5,6,9,8,11,11,11,9,11,9,8,8,10,10,11,9,9,9,5,6,5,10,7,5,8,9,8,9,8,6,9,9,5,5,8,5,11,9,9,9,9,6,7,6,9,8,11,7,8,7,5,5,5,10];
+pub const DISP_W: usize = 32;
+pub const DISP_H: usize = 46;
+pub const DISP_CHARS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:- ._";
+pub const DISP_DATA: &[u8] = include_bytes!("fuente_disp.bin");
+pub const DISP_ADV: [u8; 41] = [28,24,27,29,22,21,29,30,12,15,24,21,32,31,32,24,32,25,22,23,28,27,32,25,24,25,23,17,23,23,24,23,23,22,23,23,11,18,14,11,19];

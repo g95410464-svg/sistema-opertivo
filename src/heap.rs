@@ -5,7 +5,7 @@ use x86_64::structures::paging::{FrameAllocator, Mapper, Page, PageTableFlags, S
 use x86_64::VirtAddr;
 
 pub const INICIO_HEAP: usize = 0x_4444_4444_0000;
-pub const TAMANO_HEAP: usize = 1024 * 1024; // 1 MiB
+pub const TAMANO_HEAP: usize = 16 * 1024 * 1024; // 16 MiB (con 3 GB de RAM)
 
 #[global_allocator]
 static ASIGNADOR: LockedHeap = LockedHeap::empty();
