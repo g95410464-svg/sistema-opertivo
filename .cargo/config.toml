@@ -1,0 +1,10 @@
+[build]
+target = "x86_64-unknown-none"
+
+[target.x86_64-unknown-none]
+# El bootloader 0.9 no soporta kernels PIE enlazados en la direccion 0.
+# Con codigo estatico el kernel se enlaza en 0x200000 y no choca con el bootloader.
+rustflags = ["-C", "relocation-model=static"]
+
+[target.'cfg(target_os = "none")']
+runner = "bootimage runner"
