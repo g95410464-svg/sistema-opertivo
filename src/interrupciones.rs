@@ -1,5 +1,5 @@
 // Manejo de excepciones del CPU e interrupciones de hardware (PIC, timer, teclado).
-use crate::{gdt, print, println};
+use crate::{gdt, println, teclado};
 use core::sync::atomic::{AtomicU64, Ordering};
 use pc_keyboard::{layouts, DecodedKey, HandleControl, Keyboard, ScancodeSet1};
 use pic8259::ChainedPics;
@@ -36,6 +36,8 @@ static IDT: Lazy<InterruptDescriptorTable> = Lazy::new(|| {
     let mut idt = InterruptDescriptorTable::new();
     idt.breakpoint.set_handler_fn(breakpoint);
     idt.page_fault.set_handler_fn(falla_de_pagina);
+    idt.general_protection_fault.set_handler_fn(falla_proteccion);
+    idt.invalid_opcode.set_handler_fn(instruccion_invalida);
     unsafe {
         idt.double_fault
             .set_handler_fn(doble_falla)
@@ -53,6 +55,7 @@ pub fn init() {
     }
 }
 
+#[allow(dead_code)]
 pub fn habilitar() {
     x86_64::instructions::interrupts::enable();
 }
@@ -75,6 +78,20 @@ extern "x86-interrupt" fn falla_de_pagina(marco: InterruptStackFrame, codigo: Pa
     }
 }
 
+extern "x86-interrupt" fn falla_proteccion(marco: InterruptStackFrame, codigo: u64) {
+    panic!(
+        "EXCEPCION: PROTECCION GENERAL (codigo={:#x})\nInstruccion: {:?}",
+        codigo, marco.instruction_pointer
+    );
+}
+
+extern "x86-interrupt" fn instruccion_invalida(marco: InterruptStackFrame) {
+    panic!(
+        "EXCEPCION: INSTRUCCION INVALIDA\nInstruccion: {:?}",
+        marco.instruction_pointer
+    );
+}
+
 extern "x86-interrupt" fn doble_falla(marco: InterruptStackFrame, _codigo: u64) -> ! {
     panic!(
         "EXCEPCION: DOBLE FALLA\nInstruccion: {:?}\nPila: {:?}",
@@ -94,11 +111,13 @@ extern "x86-interrupt" fn manejar_teclado(_marco: InterruptStackFrame) {
     let mut puerto = Port::new(0x60);
     let scancode: u8 = unsafe { puerto.read() };
 
-    let mut teclado = TECLADO.lock();
-    if let Ok(Some(evento)) = teclado.add_byte(scancode) {
-        if let Some(tecla) = teclado.process_keyevent(evento) {
+    let mut kbd = TECLADO.lock();
+    if let Ok(Some(evento)) = kbd.add_byte(scancode) {
+        if let Some(tecla) = kbd.process_keyevent(evento) {
             if let DecodedKey::Unicode(caracter) = tecla {
-                print!("{}", caracter);
+                if caracter.is_ascii() {
+                    teclado::empujar_byte(caracter as u8);
+                }
             }
         }
     }

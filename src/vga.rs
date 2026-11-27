@@ -1,4 +1,4 @@
-// Driver de pantalla en modo texto VGA (80 x 25 caracteres).
+// Driver de pantalla en modo texto VGA (80 x 25) con soporte basico de secuencias ANSI.
 use core::fmt;
 use spin::Mutex;
 
@@ -28,9 +28,16 @@ pub enum Color {
     Blanco = 15,
 }
 
+enum EstadoAnsi {
+    Normal,
+    Escape,
+    Csi([u8; 8], usize),
+}
+
 pub struct Escritor {
     columna: usize,
     color: u8,
+    ansi: EstadoAnsi,
 }
 
 impl Escritor {
@@ -38,6 +45,7 @@ impl Escritor {
         Escritor {
             columna: 0,
             color: (fondo as u8) << 4 | (texto as u8),
+            ansi: EstadoAnsi::Normal,
         }
     }
 
@@ -55,23 +63,69 @@ impl Escritor {
     }
 
     pub fn escribir_byte(&mut self, byte: u8) {
-        match byte {
-            b'\n' => self.nueva_linea(),
-            0x08 => self.borrar_ultimo(),
-            byte => {
-                if self.columna >= ANCHO {
-                    self.nueva_linea();
+        match self.ansi {
+            EstadoAnsi::Normal => {
+                if byte == 0x1b {
+                    self.ansi = EstadoAnsi::Escape;
+                    return;
                 }
-                self.poner(ALTO - 1, self.columna, byte);
-                self.columna += 1;
+                match byte {
+                    b'\n' => self.nueva_linea(),
+                    0x08 => self.borrar_ultimo(),
+                    byte => {
+                        if self.columna >= ANCHO {
+                            self.nueva_linea();
+                        }
+                        self.poner(ALTO - 1, self.columna, byte);
+                        self.columna += 1;
+                    }
+                }
             }
+            EstadoAnsi::Escape => {
+                if byte == b'[' {
+                    self.ansi = EstadoAnsi::Csi([0; 8], 0);
+                } else {
+                    self.ansi = EstadoAnsi::Normal;
+                }
+            }
+            EstadoAnsi::Csi(mut buf, mut len) => {
+                if byte.is_ascii_digit() || byte == b';' {
+                    if len < buf.len() {
+                        buf[len] = byte;
+                        len += 1;
+                    }
+                    self.ansi = EstadoAnsi::Csi(buf, len);
+                } else {
+                    self.ansi = EstadoAnsi::Normal;
+                    self.aplicar_csi(&buf[..len], byte);
+                }
+            }
+        }
+    }
+
+    fn aplicar_csi(&mut self, params: &[u8], cmd: u8) {
+        match cmd {
+            b'J' => self.limpiar_pantalla(),
+            b'H' => self.columna = 0,
+            b'm' => match params {
+                b"" | b"0" => self.set_color(Color::Blanco, Color::Negro),
+                b"31" | b"91" => self.set_color(Color::RojoClaro, Color::Negro),
+                b"32" | b"92" => self.set_color(Color::VerdeClaro, Color::Negro),
+                b"33" | b"93" => self.set_color(Color::Amarillo, Color::Negro),
+                b"34" | b"94" => self.set_color(Color::AzulClaro, Color::Negro),
+                b"35" | b"95" => self.set_color(Color::Rosa, Color::Negro),
+                b"36" | b"96" => self.set_color(Color::CianClaro, Color::Negro),
+                b"37" | b"97" => self.set_color(Color::Blanco, Color::Negro),
+                _ => {}
+            },
+            _ => {}
         }
     }
 
     pub fn escribir_texto(&mut self, s: &str) {
         for byte in s.bytes() {
             match byte {
-                0x20..=0x7e | b'\n' | 0x08 => self.escribir_byte(byte),
+                0x20..=0x7e | b'\n' | 0x08 | 0x1b => self.escribir_byte(byte),
                 _ => self.escribir_byte(0xfe),
             }
         }
